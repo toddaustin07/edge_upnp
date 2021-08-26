@@ -1,0 +1,17 @@
+id: partyvoice23922.upnpexpiration
+version: 1
+status: proposed
+name: upnpexpiration
+attributes:
+  expiration:
+    schema:
+      type: object
+      properties:
+        value:
+          type: string
+          maxLength: 8
+      additionalProperties: false
+      required:
+        - value
+    enumCommands: []
+commands: {}

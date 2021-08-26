@@ -1,0 +1,24 @@
+name: toddaustin.genericupnp.v3
+components:
+- id: main
+  capabilities:
+    - id: switch
+      version: 1
+    - id: "partyvoice23922.upnpmodel"
+      version: 1
+    - id: "partyvoice23922.upnpuuid"
+      version: 1
+    - id: "partyvoice23922.upnpurn"
+      version: 1
+    - id: "partyvoice23922.upnpexpiration"
+      version: 1
+    - id: "partyvoice23922.upnpseqnum"
+      version: 1
+    - id: refresh
+      version: 1
+  categories:
+    - name: Switch
+metadata:
+  vid: f3bdd92f-96a1-34c9-9c09-57181ae25704
+  mnmn: SmartThingsCommunity
+

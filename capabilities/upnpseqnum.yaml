@@ -1,0 +1,17 @@
+id: partyvoice23922.upnpseqnum
+version: 1
+status: proposed
+name: upnpseqnum
+attributes:
+  seqNum:
+    schema:
+      type: object
+      properties:
+        value:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+      required:
+        - value
+    enumCommands: []
+commands: {}
