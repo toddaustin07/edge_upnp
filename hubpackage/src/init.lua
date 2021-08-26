@@ -46,7 +46,9 @@ local upnpcap_seqnum= capabilities["partyvoice23922.upnpseqnum"]
 local TARGETDEVICESEARCH = "ssdp:all"
 
 -- Recognized device model names and their associated Edge capability profile
--- Edit this table to include devices you want this driver to recognize and create
+-------------------------------------------------------------------------------------
+-- EDIT THIS TABLE TO INCLUDE DEVICES YOU WANT THIS DRIVER TO RECOGNIZE AND CREATE --
+-------------------------------------------------------------------------------------
 local profiles = {
   --["Pi 3 Model B"] = "toddaustin.genericupnp.v3",                   -- Raspberry Pi custom
   --["UN48J6203"] = "toddaustin.genericupnp.v3",                      -- Samsung TV
@@ -171,7 +173,7 @@ local function resubscribe_all(driver)
 end
 
 
--- Callback to handle UPnP device status & config changes 
+-- Callback to handle UPnP device status & config changes; invoked by the UPnP library device monitor 
 local function status_changed_callback(device)
   
   log.debug ("Device change callback invoked")
@@ -413,12 +415,12 @@ local function startup_device(driver, device, upnpdev)
   
     if thisdevmeta.services[1] then
   
-      serviceID = thisdevmeta.services[1].serviceId
+      serviceID = thisdevmeta.services[1].serviceId                     -- we'll use the first service's serviceId
       device:set_field('upnp_serviceID', serviceID)                     -- we'll want to refer to this elsewhere, so store it
   
       -- RETRIEVE AND INSPECT THE SERVICE DESCRIPTION INFO (optional)
       local service_description = get_service_info(device, serviceID)
-      -- >> find out available commands and state variables
+      -- >> here is where you would programmatically parse service_description for available commands and state variables
 
       -- SUBSCRIBE TO THE DESIRED SERVICE
       subscribe_device(device, serviceID, SUBSCRIBETIME)   -- subscription refresh will be called by periodic timer setup in driver mainline
@@ -443,7 +445,7 @@ end
 --                REQUIRED EDGE DRIVER HANDLERS
 ------------------------------------------------------------------------
 
--- Lifecycle handler to initialize existing devices AND newly discovered devices (unreliably invoked after device_added handler)
+-- Lifecycle handler to initialize existing devices AND newly discovered devices
 local function device_init(driver, device)
   
   log.debug(string.format("INIT handler for: <%s>", device.id))
@@ -451,7 +453,7 @@ local function device_init(driver, device)
   -- retrieve UPnP device metadata if it exists
   local upnpdev = device:get_field("upnpdevice")
   
-  if upnpdev == nil then                    -- if nil, then this handler was called to initialize a previously discovered device
+  if upnpdev == nil then                    -- if nil, then this handler was called to initialize an existing device (eg driver reinstall)
   
     local waittime = 1                      -- initially try for a quick response since it's a known device
                                             -- NOTE: search target must include prefix (eg 'uuid:') for SSDP searches
@@ -489,7 +491,7 @@ local function device_init(driver, device)
 end
 
 
--- Called when device was just discovered and created in SmartThings
+-- Called when device is initially discovered and created in SmartThings
 local function device_added (driver, device)
 
   local id = device.device_network_id
@@ -508,7 +510,7 @@ local function device_added (driver, device)
     log.error ('UPnP meta data not found for new device')               -- this should never happen!
   end
 
-  log.debug ('>>>>> EXITING DEVICE_ADDED <<<<<')
+  log.debug ('ADDED handler exiting')
 
 end
 
@@ -544,7 +546,7 @@ local function device_removed(_, device)
     
 end
 
-
+-- This lifecycle handler is currently being invoked prior to updating the driver; not sure what to do here...
 local function handler_infochanged(driver, device, event, args)
 
   log.debug ('Info changed handler; event=', event)
@@ -568,30 +570,6 @@ local function handler_infochanged(driver, device, event, args)
       end
     end
   end
-  --[[
-  log.debug ('-----------------------------')
-  log.debug ('New device info:')
-  for key, value in pairs(device) do
-    log.debug (key, value)
-    if type(value) == 'table' then
-      for k2, val2 in pairs(value) do
-        log.debug ('  ', k2, val2)
-        if type(val2) == 'table' then
-          for k3, val3 in pairs(val2) do
-            log.debug ('    ', k3, val3)
-            if type(val3) == 'table' then
-              for k4, val4 in pairs(val3) do
-                log.debug ('      ',k4, val4)
-              end
-            end
-          end
-        end
-      end
-    end
-  end
-  
-  --]]
-
 end
 
 
