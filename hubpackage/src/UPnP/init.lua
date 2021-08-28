@@ -174,7 +174,7 @@ local function validate_response(headers, target, rip)
     log.warn ("[upnp] ", rip, "~=", ip)
     
   elseif not usn:match("^uuid") then
-    log.debug(string.format("[upnp] Invalid USN returned from %s: %s ", ip, usn))
+    log.debug(string.format('[upnp] Invalid USN returned from %s: "%s"', ip, usn))
   
   elseif ip and port and usn and not ids_found[usn] then
     ids_found[usn] = true
@@ -201,7 +201,7 @@ local function validate_response(headers, target, rip)
     if is_correct_response then
       return true
     else
-      log.debug (string.format('[upnp] Incorrect search (ST header) response from %s: %s', ip, st_val))
+      log.debug (string.format('[upnp] Incorrect search (ST header) response from %s: "%s" (for target=%s)', ip, st_val, target))
     end
     
   end
@@ -337,6 +337,8 @@ local function discover (target, waitsecs, callback)
           
             setmetatable(upnpobj, {__index = upnpDevice_prototype})
             callback(upnpobj)
+          else
+            log.error ('[upnp] Unexpected error building metadata from ' .. rip)
           end
         end
       end
@@ -349,7 +351,7 @@ local function discover (target, waitsecs, callback)
     end
     
   end
-  log.info (string.format("[upnp] Discovery response window ended, %d new devices found", number_found))
+  log.info (string.format("[upnp] Discovery response window ended for %s, %d new devices found", target, number_found))
   
   devdesc_fetched = {}
   s:close()

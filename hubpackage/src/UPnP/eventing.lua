@@ -282,7 +282,7 @@ local function subscribe(devobj, serviceid, callback, subscribetime, statevars)
 	local urltarget = 'http://' .. ip .. ':' .. port
 	
 	if service.eventSubURL == nil then
-		log.error ('[upnp] No event URL for requested service')
+		log.error ('[upnp] No event URL for requested service:', serviceid)
 		return nil
 	end
 	

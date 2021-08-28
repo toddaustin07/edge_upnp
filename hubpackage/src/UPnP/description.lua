@@ -64,7 +64,7 @@ local function getXML(targeturl)
     -- at the end of its `Text-Encoding: Chunked` HTTP message, it just closes the socket,
     -- so ignore closed errors
   elseif status ~= 200 then
-    log.error ("[upnp] HTTP XML request failed ("..tostring(status)..")")
+    log.error (string.format("[upnp] HTTP XML request to %s failed with error code %s", targeturl, tostring(status)))
     return nil
   end
 

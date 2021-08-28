@@ -50,26 +50,29 @@ local TARGETDEVICESEARCH = "ssdp:all"
 -- EDIT THIS TABLE TO INCLUDE DEVICES YOU WANT THIS DRIVER TO RECOGNIZE AND CREATE --
 -------------------------------------------------------------------------------------
 local profiles = {
-  --["Pi 3 Model B"] = "toddaustin.genericupnp.v3",                   -- Raspberry Pi custom
-  --["UN48J6203"] = "toddaustin.genericupnp.v3",                      -- Samsung TV
-  ["Linksys RE6500"] = "toddaustin.genericupnp.v3",                   -- Linksys Router  
-  --["WPS"] = "toddaustin.genericupnp.v3",                            -- Router
-  --["Philips hue bridge 2015"] = "toddaustin.genericupnp.v3",        -- Philips Hue Hub
-  --["Linksys Series Router E3200"] = "toddaustin.genericupnp.v3",    -- Linksys Range extender
-  --["3600X"] = "toddaustin.genericupnp.v3",                          -- Roku Stick
-  --["3800X"] = "toddaustin.genericupnp.v3",                          -- Roku Stick
-  --["DCS-936L"] = "toddaustin.genericupnp.v3",                       -- DLink Camera
-  ["Insight"] = "toddaustin.genericupnp.v3",                          -- Belkin Wemo
-  ["Socket"] = "toddaustin.genericupnp.v3",                           -- Belkin Wemo
-  ["Dimmer"] = "toddaustin.genericupnp.v3",                           -- Belkin Wemo
-  ["Sensor"] = "toddaustin.genericupnp.v3",                           -- Belkin Wemo
-  ["Lightswitch"] = "toddaustin.genericupnp.v3",                      -- Belkin Wemo
+  ["Pi 3 Model B"] = "myprofiles.genericupnp.v1",                       -- Raspberry Pi custom
+  ["UN48J6203"] = "myprofiles.genericupnp.v1",                          -- Samsung TV
+  ["Linksys RE6500"] = "myprofiles.genericupnp.v1",                     -- Linksys Range Extender  
+  ["WPS"] = "myprofiles.genericupnp.v1",                                -- Linksys Router
+  ["Philips hue bridge 2015"] = "myprofiles.genericupnp.v1",            -- Philips Hue Hub
+  ["Linksys Series Router E3200"] = "myprofiles.genericupnp.v1",        -- Linksys Router
+  ["3600X"] = "myprofiles.genericupnp.v1",                              -- Roku Stick
+  ["3800X"] = "myprofiles.genericupnp.v1",                              -- Roku Stick
+  ["DCS-936L"] = "myprofiles.genericupnp.v1",                           -- DLink Camera
+  ["Insight"] = "myprofiles.genericupnp.v1",                            -- Belkin Wemo
+  ["Socket"] = "myprofiles.genericupnp.v1",                             -- Belkin Wemo
+  ["Dimmer"] = "myprofiles.genericupnp.v1",                             -- Belkin Wemo
+  ["Sensor"] = "myprofiles.genericupnp.v1",                             -- Belkin Wemo
+  ["Lightswitch"] = "myprofiles.genericupnp.v1",                        -- Belkin Wemo
 }
 
 local SUBSCRIBETIME = 300           -- Duration (in seconds) to stay subscribed to device events (24 hour duration = 86400)
 local TIMEOFFSET = 5 * 60 * 60 * -1 -- Used for expiration time display in ST app; 5 is for U.S. Central Time Zone (use 4 for US Eastern)
 
+local upnpDriver = {}
+
 local newly_added = {}
+local unfoundlist = {}
 
 local swstate = {}
 
@@ -92,12 +95,11 @@ end
 -- Callback for whenever a UPnP device sends an event for a subscribed service
 local function event_callback(device, sid, sequence, propertylist)
 
-  upnpdev = device:get_field("upnpdevice")
-
-  log.info ('Event received from: ' .. upnpdev:devinfo().friendlyName)
+  log.info ('Event received from: ' .. device.label)
   
   log.info ('\tSubscription ID: ' .. sid)                               -- can add a check to make sure this is an sid we recognize
   log.info ('\tSequence Number: ', sequence)
+  log.info ('\tProperties:')
   
   for key, value in pairs(propertylist) do
     log.info ('\t\t' .. key .. ': ' .. value)
@@ -147,9 +149,9 @@ local function subscribe_device (device, serviceID, duration)
 end
   
 -- Periodic subscription renewal routine
-local function resubscribe_all(driver)
+local function resubscribe_all()
   
-  local device_list = driver:get_devices()
+  local device_list = upnpDriver:get_devices()
 
   for _, device in ipairs(device_list) do
     
@@ -157,16 +159,15 @@ local function resubscribe_all(driver)
     if sid then
       
       local upnpdev = device:get_field("upnpdevice")
-      local name = upnpdev:devinfo().friendlyName
       
       if upnpdev.online then
         upnpdev:unsubscribe(sid)
         device:set_field("upnp_sid", nil)
         local serviceID = device:get_field("upnp_serviceID")
-        log.info(string.format("Re-subscribing to %s", name))
+        log.info("Re-subscribing to " .. device.label)
         subscribe_device(device, serviceID, SUBSCRIBETIME)
       else
-        log.warn(string.format("%s is offline, can't re-subscribe now", name))
+        log.warn(string.format("%s is offline, can't re-subscribe now", device.label))
       end
     end
   end
@@ -288,7 +289,7 @@ local function get_service_info(device, serviceID)
   
   if serviceID then
 
-    log.debug (string.format('Requesting (%s) service description: %s', upnpdev:devinfo().friendlyName, serviceID))
+    log.debug (string.format('Requesting service description %s from %s', serviceID, device.label))
     
     local servicetable = upnpdev:getservicedescription(serviceID)
       
@@ -296,7 +297,7 @@ local function get_service_info(device, serviceID)
     
       -- display a sampling of the service info content
     
-      log.info ('Available device control actions for ' .. serviceID .. ':')
+      log.info (string.format('Available device control actions for %s (%s):', serviceID, device.label))
       for index, data in ipairs(servicetable.actions) do
         log.info ('\t' .. data.name)
       end
@@ -387,10 +388,10 @@ end
 
 
 -- Here is where we perform all our device startup tasks
-local function startup_device(driver, device, upnpdev)
+local function startup_device(device, upnpdev)
 
   -- MANDATORY: links UPnP device metadata to SmartThings device object, and ST driver & device info to UPnP device metadata
-  upnp.link(driver, device, upnpdev)            -- creates 'upnpdevice' field in device object (among other things) 
+  upnp.link(upnpDriver, device, upnpdev)            -- creates 'upnpdevice' field in device object (among other things) 
 
   -- INITIALIZE UPNP DEVICE ONLINE/OFFLINE MONITORING
   upnpdev:monitor(status_changed_callback)     -- invoke given callback whenever UPnP device online status changes
@@ -426,11 +427,11 @@ local function startup_device(driver, device, upnpdev)
       subscribe_device(device, serviceID, SUBSCRIBETIME)   -- subscription refresh will be called by periodic timer setup in driver mainline
     
     else
-      log.warn ('Chosen service not available for device: ' .. upnpdev.uuid .. ' (' .. upnpdev:devinfo().friendlyName .. ')')
+      log.warn (string.format('Service not available for device: uuid %s (%s)', upnpdev.uuid, device.label))
     end
     
   else
-    log.warn ('No Services available for device: ' .. upnpdev.uuid .. ' (' .. upnpdev:devinfo().friendlyName .. ')')
+    log.warn (string.format('No Services available for device: uuid %s (%s)', upnpdev.uuid, device.label))
   end
   
   if serviceID then
@@ -440,6 +441,69 @@ local function startup_device(driver, device, upnpdev)
   --]]
 end
 
+
+-- Scheduled re-discover retry routine for unfound devices (stored in unfoundlist table)
+-- We'll do a broader search here with 'ssdp:all' in case some badly behaved devices don't respond to specific uuid search target
+local function proc_rediscover()
+
+  if next(unfoundlist) ~= nil then
+  
+    log.debug ('Running periodic re-discovery process for uninitialized devices:')
+    for device_network_id, table in pairs(unfoundlist) do
+      log.debug (string.format('\t%s (%s)', device_network_id, table.device.label))
+    end
+  
+    upnp.discover('ssdp:all', 3,    
+                    function (upnpdev)
+      
+                      for device_network_id, table in pairs(unfoundlist) do
+                        
+                        if device_network_id == upnpdev.uuid then
+                        
+                          local device = table.device
+                          local callback = table.callback
+                          
+                          log.info (string.format('Known device <%s (%s)> re-discovered at %s', device.id, device.label, upnpdev.ip))
+                          
+                          unfoundlist[device_network_id] = nil
+                          callback(device, upnpdev)
+                        end
+                      end
+                    end
+    )
+  
+     -- give discovery some time to finish
+    socket.sleep(20)
+    -- Reschedule this routine again if still unfound devices
+    if next(unfoundlist) ~= nil then
+      upnpDriver:call_with_delay(40, proc_rediscover, 're-discover routine')
+    end
+  end
+end
+
+
+-- Subroutine to do re-discovery (with retries) on a known device
+local function dosearch(device, searchtarget)
+  
+  local waittime = 3
+                                            
+  log.debug (string.format('Performing re-discovery for <%s (%s)> with search target = %s', device.id, device.label, searchtarget))
+  
+  local upnpdev
+  
+  while waittime <= 3 do
+    upnp.discover(searchtarget, waittime, function(devobj) upnpdev = devobj end)
+    if upnpdev then 
+      if device.device_network_id == upnpdev.uuid then; return upnpdev; end
+    end
+    upnpdev = nil
+    waittime = waittime + 1   
+    if waittime <= 3 then
+      socket.sleep(2)
+    end
+  end
+  
+end
   
 ------------------------------------------------------------------------
 --                REQUIRED EDGE DRIVER HANDLERS
@@ -448,45 +512,38 @@ end
 -- Lifecycle handler to initialize existing devices AND newly discovered devices
 local function device_init(driver, device)
   
-  log.debug(string.format("INIT handler for: <%s>", device.id))
+  log.debug(string.format("INIT handler for: <%s (%s)>", device.id, device.label))
 
   -- retrieve UPnP device metadata if it exists
   local upnpdev = device:get_field("upnpdevice")
   
-  if upnpdev == nil then                    -- if nil, then this handler was called to initialize an existing device (eg driver reinstall)
-  
-    local waittime = 1                      -- initially try for a quick response since it's a known device
-                                            -- NOTE: search target must include prefix (eg 'uuid:') for SSDP searches
-    local searchtarget = 'uuid:' .. device.device_network_id            
-    
-    log.debug (string.format('Performing re-discovery for <%s> with upnp target = %s', device.id, searchtarget))
-    
-    while waittime <= 3 do
-      upnp.discover(searchtarget, waittime, function(devobj) upnpdev = devobj end)
-      if upnpdev then 
-        if device.device_network_id == upnpdev.uuid then
-          log.info("Known device <" .. device.id .. "> found at: " .. upnpdev.ip .. ' (' .. upnpdev:devinfo().friendlyName .. ')')
-          break
-        end
-      end
-      upnpdev = nil
-      waittime = waittime + 1   
-      if waittime <= 3 then
-        socket.sleep(2)
-      end
-    end
+  -- if upnp metadata is nil, then this handler was called to re-initialize an existing device (eg after driver reinstall)
+  if upnpdev == nil then                    
+                                            
+    -- Try a targeted discovery for the specific uuid; Search targets must include prefix, e.g. 'uuid:...' or 'urn:....'
+    upnpdev = dosearch(device, 'uuid:' .. device.device_network_id) 
   
     if not upnpdev then
-      log.warn("<" .. device.id .. "> not found on network")
-      return
       
-    else
-      startup_device(driver, device, upnpdev)
+      log.warn (string.format('<%s (%s)> not found on network', device.id, device.label))
       
+      -- Save unfound devices in unfoundlist table and schedule a retry routine for later
+      if next(unfoundlist) == nil then
+        unfoundlist[device.device_network_id] = { ['device'] = device, ['callback'] = startup_device }
+        log.warn ('\tScheduling re-discover routine for later')
+        upnpDriver:call_with_delay(30, proc_rediscover, 're-discover routine')
+      else
+        unfoundlist[device.device_network_id] = { ['device'] = device, ['callback'] = startup_device }
+      end
+    end  
+    
+    if upnpdev then
+      log.info (string.format('Known device <%s (%s)> found at %s', device.id, device.label, upnpdev.ip))
+      startup_device(device, upnpdev)
     end
     
   else
-      log.debug ('INIT handler: metadata already known for upnp uuid ' .. device.device_network_id .. ' (' .. upnpdev:devinfo().friendlyName .. ')')
+      log.debug (string.format('INIT handler: metadata already known for upnp uuid %s (%s)', device.device_network_id, device.label))
   end
 end
 
@@ -496,13 +553,13 @@ local function device_added (driver, device)
 
   local id = device.device_network_id
 
-  log.info(string.format('ADDED handler: <%s> successfully added; device_network_id = %s', device.id, id))
+  log.info(string.format('ADDED handler: <%s (%s)> successfully added; device_network_id = %s', device.id, device.label, id))
   
   -- get UPnP metadata that was squirreled away when device was created
   upnpdev = newly_added[id]
   
   if upnpdev ~= nil then
-    startup_device(driver, device, upnpdev)
+    startup_device(device, upnpdev)
     
     newly_added[id] = nil                                               -- we're done with it
   
@@ -510,7 +567,7 @@ local function device_added (driver, device)
     log.error ('UPnP meta data not found for new device')               -- this should never happen!
   end
 
-  log.debug ('ADDED handler exiting')
+  log.debug ('ADDED handler exiting for ' .. device.label)
 
 end
 
@@ -549,8 +606,24 @@ end
 -- This lifecycle handler is currently being invoked prior to updating the driver; not sure what to do here...
 local function handler_infochanged(driver, device, event, args)
 
-  log.debug ('Info changed handler; event=', event)
+  log.debug ('INFOCHANGED handler; event=', event)
   
+  device:offline()
+  local upnpdev = device:get_field("upnpdevice")
+  
+  if upnpdev ~= nil then
+    
+    local sid = device:get_field("upnp_sid")
+    if sid ~= nil then
+      log.info ('Unsubscribing from device: ', device.label)
+      upnpdev:unsubscribe(sid)
+      upnpdev:cancel_resubscribe(sid)
+      device:set_field("upnp_sid", nil)
+    end  
+    
+  end
+  
+  --[[
   log.debug ('Old device info:')
   for key, value in pairs(args) do
     log.debug (key, value)
@@ -570,6 +643,8 @@ local function handler_infochanged(driver, device, event, args)
       end
     end
   end
+  --]]
+  
 end
 
 
@@ -640,7 +715,7 @@ local function discovery_handler(driver, _, should_continue)
                         }
                         
                         log.info(string.format("Creating discovered device: %s / %s at %s", name, modelname, ip))
-                        log.info("\tupnp uuid  = device_network_id = ", id)
+                        log.info("\tupnp uuid  = device_network_id = " .. id)
 
                         newly_added[id] = upnpdev         -- squirrel away UPnP device metadata for device_added handler
                                                           -- ... because there's currently no way to attach it to the new device here :-(
@@ -670,7 +745,7 @@ end
 -----------------------------------------------------------------------
 --        DRIVER MAINLINE: Build driver context table
 -----------------------------------------------------------------------
-local upnpDriver = Driver("upnpDriver", {
+upnpDriver = Driver("upnpDriver", {
   discovery = discovery_handler,
   lifecycle_handlers = {
     init = device_init,

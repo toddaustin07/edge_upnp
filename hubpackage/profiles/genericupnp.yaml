@@ -1,4 +1,4 @@
-name: toddaustin.genericupnp.v3
+name: myprofiles.genericupnp.v1
 components:
 - id: main
   capabilities:
