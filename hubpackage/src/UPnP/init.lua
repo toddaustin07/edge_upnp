@@ -337,8 +337,7 @@ local function discover (target, waitsecs, callback)
           
             setmetatable(upnpobj, {__index = upnpDevice_prototype})
             callback(upnpobj)
-          else
-            log.error ('[upnp] Unexpected error building metadata from ' .. rip)
+            
           end
         end
       end

@@ -98,7 +98,7 @@ local function event_callback(device, sid, sequence, propertylist)
   log.info ('Event received from: ' .. device.label)
   
   log.info ('\tSubscription ID: ' .. sid)                               -- can add a check to make sure this is an sid we recognize
-  log.info ('\tSequence Number: ', sequence)
+  log.info ('\tSequence Number: ' .. tostring(sequence))
   log.info ('\tProperties:')
   
   for key, value in pairs(propertylist) do
@@ -525,7 +525,7 @@ local function device_init(driver, device)
   
     if not upnpdev then
       
-      log.warn (string.format('<%s (%s)> not found on network', device.id, device.label))
+      log.warn (string.format('<%s (%s)> not responding', device.id, device.label))
       
       -- Save unfound devices in unfoundlist table and schedule a retry routine for later
       if next(unfoundlist) == nil then
