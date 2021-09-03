@@ -36,6 +36,16 @@ local ids_found = {}                -- used to filter duplicate usn's during dis
 local devdesc_fetched = {}
 
 
+-- Called at device initialization to link UPnP metadata to SmartThings device, and ST device/driver data to UPnP metadata
+local function link (upnpdev, driver, stdevice)
+
+  upnpdev.stdriver = driver
+  upnpdev.stdevice = stdevice
+  stdevice:set_field("upnpdevice", upnpdev)
+
+end
+
+
 -- Method to remove UPnP device from known & monitored devices
 local function forget(upnpdev)
 
@@ -88,6 +98,10 @@ local function devinfo(upnpdev, uuid)
 end
 
 upnpDevice_prototype = {
+    init = function (self, driver, device)
+  link(self, driver, device)
+    end,
+
     monitor = function (self, configchange_callback)
   return(watcher.register(self, configchange_callback))
     end,
@@ -356,15 +370,6 @@ local function discover (target, waitsecs, callback)
   s:close()
   return true
   
-end
-
--- Called at device initialization to link UPnP metadata to SmartThings device, and ST device/driver data to UPnP metadata
-local function link (driver, stdevice, upnpdevice)
-
-  upnpdevice.stdriver = driver
-  upnpdevice.stdevice = stdevice
-  stdevice:set_field("upnpdevice", upnpdevice)
-
 end
 
 

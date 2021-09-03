@@ -173,7 +173,7 @@ end
 local function startup_device(driver, device, upnpdev)
 
   -- MANDATORY: links UPnP device metadata to SmartThings device object, and ST driver & device info to UPnP device metadata
-  upnp.link(driver, device, upnpdev)            -- creates 'upnpdevice' field in device object (among other things) 
+  upnpdev:init(driver, device)                 -- creates 'upnpdevice' field in device object (among other things) 
 
   -- INITIALIZE UPNP DEVICE ONLINE/OFFLINE MONITORING
   upnpdev:monitor(status_changed_callback)     -- invoke given callback whenever UPnP device online status changes

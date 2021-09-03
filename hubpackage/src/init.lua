@@ -390,8 +390,8 @@ end
 -- Here is where we perform all our device startup tasks
 local function startup_device(device, upnpdev)
 
-  -- MANDATORY: links UPnP device metadata to SmartThings device object, and ST driver & device info to UPnP device metadata
-  upnp.link(upnpDriver, device, upnpdev)            -- creates 'upnpdevice' field in device object (among other things) 
+  -- MANDATORY: Must be called to establish linkage between Edge device and UPnP device objects
+  upnpdev:init(upnpDriver, device)             -- creates 'upnpdevice' field in device object (among other things) 
 
   -- INITIALIZE UPNP DEVICE ONLINE/OFFLINE MONITORING
   upnpdev:monitor(status_changed_callback)     -- invoke given callback whenever UPnP device online status changes
