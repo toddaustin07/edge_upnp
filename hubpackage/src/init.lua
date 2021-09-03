@@ -603,47 +603,10 @@ local function device_removed(_, device)
     
 end
 
--- This lifecycle handler is currently being invoked prior to updating the driver; not sure what to do here...
+-- WARNING:  Known issue is that this lifecycle handler may be invoked prior to updating the driver (should be driverSwitched)
 local function handler_infochanged(driver, device, event, args)
 
   log.debug ('INFOCHANGED handler; event=', event)
-  
-  device:offline()
-  local upnpdev = device:get_field("upnpdevice")
-  
-  if upnpdev ~= nil then
-    
-    local sid = device:get_field("upnp_sid")
-    if sid ~= nil then
-      log.info ('Unsubscribing from device: ', device.label)
-      upnpdev:unsubscribe(sid)
-      upnpdev:cancel_resubscribe(sid)
-      device:set_field("upnp_sid", nil)
-    end  
-    
-  end
-  
-  --[[
-  log.debug ('Old device info:')
-  for key, value in pairs(args) do
-    log.debug (key, value)
-    if type(value) == 'table' then
-      for k2, val2 in pairs(value) do
-        log.debug ('\t' .. k2, val2)
-        if type(val2) == 'table' then
-          for k3, val3 in pairs(val2) do
-            log.debug ('\t\t' .. k3, val3)
-            if type(val3) == 'table' then
-              for k4, val4 in pairs(val3) do
-                log.debug ('\t\t\t' .. k4, val4)
-              end
-            end
-          end
-        end
-      end
-    end
-  end
-  --]]
   
 end
 
