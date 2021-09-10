@@ -1,2 +1,5 @@
-name: 'testupnp'
-packageKey: 'testupnp'
+name: 'UPnP Package'
+packageKey: 'testupnp2'
+permissions:
+    lan: {}
+    discovery: {}
