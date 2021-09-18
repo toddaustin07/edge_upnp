@@ -37,7 +37,11 @@ local function printdescription(devdesc)
       print ('\x1b[96m   ' .. sd_index .. '\x1b[0m')
       for sd_key, sd_value in pairs(sd_data) do
         if (sd_key ~= 'services') and (sd_key ~= 'subdevices')then
-          print ('\t\x1b[97m' .. sd_key .. ': \x1b[0m' .. sd_value)
+          if type(sd_value) ~= 'table' then
+            print ('\t\x1b[97m' .. sd_key .. ': \x1b[0m' .. sd_value)
+          else
+            print ('\t\x1b[97m' .. sd_key .. '\x1b[0m (table)')
+          end
         end
       end
       

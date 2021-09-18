@@ -79,7 +79,7 @@ local function devinfo(upnpdev, uuid)
           return subdev
         end
           
-        if #subdev.subdevices > 0 then
+        if subdev.subdevices then
         
           for _, subsubdev in ipairs(subdev.subdevices) do
             if subsubdev.UDN == _uuid then
