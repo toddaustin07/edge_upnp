@@ -395,7 +395,7 @@ local function discovery_handler(driver, _, should_continue)
 
   -- We'll limit our discovery to repeat_count to minimize unnecessary LAN traffic
 
-  while should_continue and (repeat_count > 0) do
+  while should_continue() and (repeat_count > 0) do
     log.debug("Making discovery request #" .. ((repeat_count*-1)+4) .. '; for target: ' .. searchtarget)
     
     --****************************************************************************
